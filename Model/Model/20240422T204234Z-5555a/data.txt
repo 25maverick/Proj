@@ -1,0 +1,20 @@
+api_version: 1
+created: 20240422T204234Z
+description: Model of Project
+file: Model.joblib
+file_size: 3687
+pin_hash: 5555a24c1bcf958a
+title: 'Model: a pinned Pipeline object'
+type: joblib
+user:
+  user:
+    description: Model for predicting penguin weights
+  vetiver_meta:
+    prototype: null
+    python_version:
+    - 3
+    - 12
+    - 3
+    - final
+    - 0
+    required_pkgs: []
