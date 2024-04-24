@@ -1,0 +1,196 @@
+---
+title: "Model"
+format:
+  html:
+    code-fold: true
+---
+
+```{Python}
+from palmerpenguins import penguins
+from pandas import get_dummies
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn import preprocessing
+```
+
+```{Python}
+from palmerpenguins import load_penguins
+import pandas as pd
+
+# Load the Palmer Penguins dataset
+df = load_penguins().dropna()
+
+# Display the first 3 rows of the dataset
+print(df.head(3))
+```
+
+```{Python}
+from palmerpenguins import load_penguins
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline as SklearnPipeline
+import os
+from pins import board_folder
+from vetiver import vetiver_pin_write
+
+df = load_penguins().dropna()
+
+columns_to_encode = ['species', 'sex']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('onehot', OneHotEncoder(drop='first'), columns_to_encode)
+    ],
+    remainder='passthrough'
+)
+
+# Define the pipeline with preprocessor and linear regression model
+pipeline = Pipeline(
+    steps=[
+        ('preprocessor', preprocessor),
+        ('regressor', LinearRegression())
+    ]
+)
+
+X = df[['bill_length_mm', 'species', 'sex']]
+y = df['body_mass_g']
+
+model = pipeline.fit(X, y)
+
+print(f"R^2: {model.score(X, y)}")
+print(f"Intercept: {model.named_steps['regressor'].intercept_}")
+print(f"Columns: {pipeline.named_steps['preprocessor'].get_feature_names_out()}")
+print(f"Coefficients: {model.named_steps['regressor'].coef_}")
+
+from sklearn.pipeline import Pipeline as SklearnPipeline
+
+metadata = {'description': 'Model for predicting penguin weights'}
+
+class CustomPipeline(SklearnPipeline):
+    def __init__(self, steps, metadata=None, model_name=None, description = None, prototype=None):
+        super().__init__(steps)
+        self.metadata = metadata
+        self.model_name = model_name
+        self.description = description
+        self.prototype = prototype
+
+model = pipeline.fit(X, y)
+
+CustomPipeline.model = model
+
+directory = '/users/weissyuan/M378/Model'
+
+# Create the directory if it doesn't exist
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+# Create an instance of CustomPipeline with metadata and model_name
+custom_pipeline = CustomPipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('regressor', LinearRegression())
+], metadata={'description': 'Model for predicting penguin weights'}, model_name='Model', description = 'Model')
+
+from vetiver import PrototypeMixin
+
+class CustomModel(PrototypeMixin):
+    def __init__(self, model, metadata):
+        self.model = model
+        self.metadata = metadata
+        
+    def handler_predict(self, data):
+        return self.model.predict(data)
+
+custom_model = CustomModel(model=pipeline, metadata=metadata)
+
+# Save the model using vetiver
+model_board = board_folder(directory, allow_pickle_read=True)
+vetiver_pin_write(model_board, custom_model)
+
+from vetiver import VetiverAPI, VetiverModel
+
+# Load your custom model
+b = pins.board_folder('/users/weissyuan/M378/Model', allow_pickle_read=True)
+custom_model = VetiverModel.from_pin(b, 'Model')
+
+app = VetiverAPI(custom_model, check_prototype=True)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="localhost", port=8000)
+
+```
+
+    Model Cards provide a framework for transparent, responsible reporting. 
+     Use the vetiver `.qmd` Quarto template as a place to start, 
+     with vetiver.model_card()
+    Writing pin:
+    Name: 'MyModel'
+    Version: 20240422T201207Z-5555a
+
+\
+
+```{Python}
+from palmerpenguins import load_penguins
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline as SklearnPipeline
+import os
+from pins import board_folder
+from vetiver import VetiverAPI, vetiver_pin_write
+
+df = load_penguins().dropna()
+
+columns_to_encode = ['species', 'sex']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('onehot', OneHotEncoder(drop='first'), columns_to_encode)
+    ],
+    remainder='passthrough'
+)
+
+pipeline = Pipeline(
+    steps=[
+        ('preprocessor', preprocessor),
+        ('regressor', LinearRegression())
+    ]
+)
+
+X = df[['bill_length_mm', 'species', 'sex']]
+y = df['body_mass_g']
+
+model = pipeline.fit(X, y)
+
+metadata = {'description': 'Model for predicting penguin weights'}
+
+class CustomModel:
+    def __init__(self, model, metadata, model_name, description, prototype):
+        self.model = model
+        self.metadata = metadata
+        self.model_name = model_name
+        self.description = description
+        self.prototype = prototype
+        
+    def handler_predict(self, data):
+        return self.model.predict(data)
+
+custom_model = CustomModel(model=pipeline, metadata=metadata, model_name = "Model", description = "Model of Project", prototype = None)
+
+directory = '/users/weissyuan/M378/Model'
+
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+# Save the model using vetiver
+model_board = board_folder(directory, allow_pickle_read=True)
+vetiver_pin_write(model_board, custom_model)
+
+# Create VetiverAPI instance
+app = VetiverAPI(model_board, check_prototype=False)
+
+
+```
